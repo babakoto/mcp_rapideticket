@@ -5,7 +5,7 @@ import { argv, env, exit, stdin, stdout } from 'node:process';
 import { createInterface } from 'node:readline';
 
 const protocolVersion = '2024-11-05';
-const serverVersion = '0.1.0';
+const serverVersion = '0.1.1';
 const defaultApiUrl = 'https://rapideticket.com';
 
 function cleanBaseUrl(value) {
@@ -71,6 +71,40 @@ function tools() {
         q: { type: 'string', description: 'Optional search query.' },
         limit: { type: 'number', description: 'Maximum number of tickets after filtering.' },
       }),
+    },
+    {
+      name: 'rapideticket_list_specifications',
+      description: 'List collaborative specification pages for a project.',
+      inputSchema: objectSchema({
+        projectId: projectProp,
+        parentId: { type: 'string', description: 'Optional parent specification id. Empty returns root pages.' },
+        includeBody: { type: 'boolean', description: 'Include raw specification body JSON in results.' },
+        limit: { type: 'number', description: 'Maximum number of specification pages.' },
+      }),
+    },
+    {
+      name: 'rapideticket_search_specifications',
+      description: 'Search collaborative specification pages by title and body.',
+      inputSchema: objectSchema(
+        {
+          projectId: projectProp,
+          q: { type: 'string', description: 'Search query.' },
+          includeBody: { type: 'boolean', description: 'Include raw specification body JSON in results.' },
+          limit: { type: 'number', description: 'Maximum number of matching specification pages.' },
+        },
+        ['q'],
+      ),
+    },
+    {
+      name: 'rapideticket_get_specification',
+      description: 'Get a collaborative specification page detail, including its raw editor body.',
+      inputSchema: objectSchema(
+        {
+          projectId: projectProp,
+          specificationId: { type: 'string', description: 'Specification page id.' },
+        },
+        ['specificationId'],
+      ),
     },
     {
       name: 'rapideticket_get_ticket',
@@ -201,6 +235,12 @@ function issueSprintId(issue) {
   return '';
 }
 
+function specificationId(args) {
+  const id = stringArg(args, 'specificationId');
+  if (!id) throw new Error('specificationId is required');
+  return id;
+}
+
 function pathFor(projectIdValue, suffix = '') {
   return `/api/v1/projects/${encodeURIComponent(projectIdValue)}${suffix}`;
 }
@@ -259,6 +299,66 @@ async function listFilteredTickets(projectIdValue, args, keep) {
   return out;
 }
 
+function bodyText(value) {
+  if (!value) return '';
+  if (typeof value === 'string') {
+    try {
+      return bodyText(JSON.parse(value));
+    } catch {
+      return value;
+    }
+  }
+  if (Array.isArray(value)) return value.map(bodyText).filter(Boolean).join(' ');
+  if (typeof value === 'object') {
+    const parts = [];
+    for (const key of ['text', 'insert', 'caption', 'title', 'altText', 'children', 'ops', 'root']) {
+      if (Object.hasOwn(value, key)) parts.push(bodyText(value[key]));
+    }
+    if (parts.length > 0) return parts.filter(Boolean).join(' ');
+    return Object.values(value).map(bodyText).filter(Boolean).join(' ');
+  }
+  return '';
+}
+
+function compactSpecification(spec, { includeBody = false } = {}) {
+  const out = { ...spec };
+  const extracted = bodyText(spec?.body).replace(/\s+/g, ' ').trim();
+  if (extracted) out.text = extracted.slice(0, 4000);
+  if (!includeBody) delete out.body;
+  return out;
+}
+
+async function listSpecifications(projectIdValue, args = {}) {
+  const items = await apiJson('GET', pathFor(projectIdValue, '/specifications'));
+  if (!Array.isArray(items)) return items;
+  const parentId = stringArg(args, 'parentId');
+  const includeBody = args?.includeBody === true;
+  const limit = numberArg(args, 'limit');
+  const filtered = parentId
+    ? items.filter((item) => stringArg(item, 'parentId') === parentId)
+    : items;
+  return filtered
+    .slice(0, limit && limit > 0 ? Math.trunc(limit) : filtered.length)
+    .map((item) => compactSpecification(item, { includeBody }));
+}
+
+async function searchSpecifications(projectIdValue, args = {}) {
+  const query = stringArg(args, 'q').toLowerCase();
+  if (!query) throw new Error('q is required');
+  const items = await apiJson('GET', pathFor(projectIdValue, '/specifications'));
+  if (!Array.isArray(items)) return items;
+  const includeBody = args?.includeBody === true;
+  const limit = numberArg(args, 'limit');
+  const matches = [];
+  for (const item of items) {
+    const haystack = `${stringArg(item, 'title')} ${bodyText(item?.body)}`.toLowerCase();
+    if (!haystack.includes(query)) continue;
+    matches.push(compactSpecification(item, { includeBody }));
+    if (limit && limit > 0 && matches.length >= limit) break;
+  }
+  return matches;
+}
+
 async function createTicket(projectIdValue, args) {
   const form = new FormData();
   for (const key of [
@@ -293,6 +393,15 @@ async function callTool(name, args = {}) {
     }
     case 'rapideticket_list_backlog_tickets':
       return listFilteredTickets(projectId(args), args, (issue) => issueSprintId(issue) === '');
+    case 'rapideticket_list_specifications':
+      return listSpecifications(projectId(args), args);
+    case 'rapideticket_search_specifications':
+      return searchSpecifications(projectId(args), args);
+    case 'rapideticket_get_specification': {
+      const pid = projectId(args);
+      const sid = specificationId(args);
+      return apiJson('GET', pathFor(pid, `/specifications/${encodeURIComponent(sid)}`));
+    }
     case 'rapideticket_get_ticket': {
       const ids = projectAndIssue(args);
       return apiJson('GET', pathFor(ids.projectId, `/issues/${encodeURIComponent(ids.issueId)}`));

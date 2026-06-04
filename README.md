@@ -57,11 +57,34 @@ curl http://localhost:8090/health
 - `rapideticket_list_sprints`
 - `rapideticket_list_sprint_tickets`
 - `rapideticket_list_backlog_tickets`
+- `rapideticket_list_specifications`
+- `rapideticket_search_specifications`
+- `rapideticket_get_specification`
 - `rapideticket_get_ticket`
 - `rapideticket_create_ticket`
 - `rapideticket_update_ticket`
 - `rapideticket_move_ticket`
 - `rapideticket_add_comment`
+
+### Specifications
+
+Use the specification tools to let an MCP client inspect the collaborative
+documentation attached to a project:
+
+```json
+{
+  "name": "rapideticket_search_specifications",
+  "arguments": {
+    "projectId": "DEMO",
+    "q": "checkout flow",
+    "limit": 5
+  }
+}
+```
+
+`rapideticket_list_specifications` returns the page tree metadata and a compact
+plain-text extraction by default. Pass `includeBody: true` when the client needs
+the raw editor JSON. `rapideticket_get_specification` returns one full page.
 
 ## Publish
 
