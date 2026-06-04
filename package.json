@@ -1,0 +1,32 @@
+{
+  "name": "@rapideticket/mcp-server",
+  "version": "0.1.0",
+  "description": "RapideTicket MCP server for Claude, Cursor, Codex, and other MCP clients.",
+  "type": "module",
+  "bin": {
+    "rapideticket-mcp": "./bin/rapideticket-mcp.js"
+  },
+  "files": [
+    "bin",
+    "README.md"
+  ],
+  "scripts": {
+    "check": "node --check bin/rapideticket-mcp.js",
+    "pack:check": "npm pack --dry-run"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "rapideticket",
+    "tickets",
+    "feedback"
+  ],
+  "author": "RapideTicket",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.18.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
