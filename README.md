@@ -37,17 +37,6 @@ Create the MCP token from the dashboard in `Project settings > MCP`.
 The token is shown only once, stored hashed in the API database, and forwarded
 to the existing RapideTicket API as a Bearer token.
 
-## Optional environment variables
-
-```sh
-RAPIDETICKET_API_TOKEN=<project MCP token>
-RAPIDETICKET_DEFAULT_PROJECT_ID=<optional project uuid or client key>
-RAPIDETICKET_API_URL=https://rapideticket.com
-MCP_HTTP_ADDR=:8090
-```
-
-`RAPIDETICKET_API_URL` is optional. Use it only for local development or staging.
-
 ## Local development
 
 ```sh
