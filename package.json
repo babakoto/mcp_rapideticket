@@ -1,10 +1,10 @@
 {
-  "name": "@rapideticket/mcp-server",
+  "name": "mcp-rapideticket",
   "version": "0.1.1",
   "description": "RapideTicket MCP server for Claude, Cursor, Codex, and other MCP clients.",
   "type": "module",
   "bin": {
-    "rapideticket-mcp": "./bin/rapideticket-mcp.js"
+    "rapideticket-mcp": "bin/rapideticket-mcp.js"
   },
   "files": [
     "bin",

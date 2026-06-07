@@ -462,7 +462,7 @@ async function handle(request) {
         return rpcResult(id, {
           protocolVersion,
           capabilities: { tools: {} },
-          serverInfo: { name: '@rapideticket/mcp-server', version: serverVersion },
+          serverInfo: { name: 'mcp-rapideticket', version: serverVersion },
         });
       case 'tools/list':
         return rpcResult(id, { tools: tools() });

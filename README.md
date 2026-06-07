@@ -5,7 +5,7 @@ MCP server for Claude, Cursor, Codex, and other MCP-compatible clients.
 The package is distributed as an npm CLI:
 
 ```sh
-npx -y @rapideticket/mcp-server --stdio
+npx -y mcp-rapideticket --stdio
 ```
 
 The RapideTicket API URL is built in and defaults to:
@@ -23,7 +23,7 @@ You only need to provide a RapideTicket MCP token.
   "mcpServers": {
     "rapideticket": {
       "command": "npx",
-      "args": ["-y", "@rapideticket/mcp-server", "--stdio"],
+      "args": ["-y", "mcp-rapideticket", "--stdio"],
       "env": {
         "RAPIDETICKET_API_TOKEN": "<YOUR_MCP_TOKEN>",
         "RAPIDETICKET_DEFAULT_PROJECT_ID": "<optional project uuid or client key>"
