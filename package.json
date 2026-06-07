@@ -1,6 +1,6 @@
 {
   "name": "mcp-rapideticket",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "RapideTicket MCP server for Claude, Cursor, Codex, and other MCP clients.",
   "type": "module",
   "bin": {
