@@ -54,6 +54,8 @@ curl http://localhost:8090/health
 
 - `rapideticket_list_projects`
 - `rapideticket_list_tickets`
+- `rapideticket_list_prompts`
+- `rapideticket_get_prompt`
 - `rapideticket_list_sprints`
 - `rapideticket_list_sprint_tickets`
 - `rapideticket_list_backlog_tickets`

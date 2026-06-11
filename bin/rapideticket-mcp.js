@@ -5,7 +5,7 @@ import { argv, env, exit, stdin, stdout } from 'node:process';
 import { createInterface } from 'node:readline';
 
 const protocolVersion = '2024-11-05';
-const serverVersion = '0.1.1';
+const serverVersion = '0.1.4';
 const defaultApiUrl = 'https://rapideticket.com';
 
 function cleanBaseUrl(value) {
@@ -44,6 +44,30 @@ function tools() {
         q: { type: 'string', description: 'Optional search query.' },
         limit: { type: 'number', description: 'Maximum number of tickets.' },
       }),
+    },
+    {
+      name: 'rapideticket_list_prompts',
+      description: 'List AI prompts for a project, including status, assigned agent, parent prompt, and attachments.',
+      inputSchema: objectSchema({
+        projectId: projectProp,
+        q: { type: 'string', description: 'Optional search query.' },
+        status: {
+          type: 'string',
+          description: 'Optional Kanban column/status key, for example TODO, IN_PROGRESS, QA, or DONE.',
+        },
+        limit: { type: 'number', description: 'Maximum number of prompts.' },
+      }),
+    },
+    {
+      name: 'rapideticket_get_prompt',
+      description: 'Get one AI prompt with its assigned agent, status, sub-prompt relationship, and attachments.',
+      inputSchema: objectSchema(
+        {
+          projectId: projectProp,
+          promptId: { type: 'string', description: 'Prompt UUID.' },
+        },
+        ['promptId'],
+      ),
     },
     {
       name: 'rapideticket_list_sprints',
@@ -241,6 +265,12 @@ function specificationId(args) {
   return id;
 }
 
+function promptId(args) {
+  const id = stringArg(args, 'promptId');
+  if (!id) throw new Error('promptId is required');
+  return id;
+}
+
 function pathFor(projectIdValue, suffix = '') {
   return `/api/v1/projects/${encodeURIComponent(projectIdValue)}${suffix}`;
 }
@@ -297,6 +327,24 @@ async function listFilteredTickets(projectIdValue, args, keep) {
     if (limit && limit > 0 && out.length >= limit) break;
   }
   return out;
+}
+
+async function listPrompts(projectIdValue, args = {}) {
+  const query = new URLSearchParams();
+  const q = stringArg(args, 'q');
+  if (q) query.set('q', q);
+  const encoded = query.toString();
+  const items = await apiJson(
+    'GET',
+    `${pathFor(projectIdValue, '/prompts')}${encoded ? `?${encoded}` : ''}`,
+  );
+  if (!Array.isArray(items)) return items;
+  const status = stringArg(args, 'status').toUpperCase();
+  const limit = numberArg(args, 'limit');
+  const filtered = status
+    ? items.filter((item) => stringArg(item, 'status').toUpperCase() === status)
+    : items;
+  return filtered.slice(0, limit && limit > 0 ? Math.trunc(limit) : filtered.length);
 }
 
 function bodyText(value) {
@@ -383,6 +431,13 @@ async function callTool(name, args = {}) {
       return apiJson('GET', '/api/v1/projects');
     case 'rapideticket_list_tickets':
       return listTickets(projectId(args), args);
+    case 'rapideticket_list_prompts':
+      return listPrompts(projectId(args), args);
+    case 'rapideticket_get_prompt': {
+      const pid = projectId(args);
+      const id = promptId(args);
+      return apiJson('GET', pathFor(pid, `/prompts/${encodeURIComponent(id)}`));
+    }
     case 'rapideticket_list_sprints':
       return apiJson('GET', pathFor(projectId(args), '/mvps'));
     case 'rapideticket_list_sprint_tickets': {
