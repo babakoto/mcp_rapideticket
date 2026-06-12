@@ -5,7 +5,7 @@ import { argv, env, exit, stdin, stdout } from 'node:process';
 import { createInterface } from 'node:readline';
 
 const protocolVersion = '2024-11-05';
-const serverVersion = '0.1.5';
+const serverVersion = '0.1.6';
 const defaultApiUrl = 'https://rapideticket.com';
 
 function cleanBaseUrl(value) {
@@ -61,6 +61,17 @@ function tools() {
     {
       name: 'rapideticket_get_prompt',
       description: 'Get one AI prompt with its assigned agent, status, sub-prompt relationship, and attachments.',
+      inputSchema: objectSchema(
+        {
+          projectId: projectProp,
+          promptId: { type: 'string', description: 'Prompt UUID.' },
+        },
+        ['promptId'],
+      ),
+    },
+    {
+      name: 'rapideticket_create_prompt_branch',
+      description: 'Create the planned Git branch for an AI prompt on the project default GitHub or GitLab destination.',
       inputSchema: objectSchema(
         {
           projectId: projectProp,
@@ -151,6 +162,17 @@ function tools() {
     {
       name: 'rapideticket_get_ticket',
       description: 'Get a ticket detail.',
+      inputSchema: objectSchema(
+        {
+          projectId: projectProp,
+          issueId: { type: 'string' },
+        },
+        ['issueId'],
+      ),
+    },
+    {
+      name: 'rapideticket_create_ticket_branch',
+      description: 'Create the planned Git branch for a ticket on the project default GitHub or GitLab destination.',
       inputSchema: objectSchema(
         {
           projectId: projectProp,
@@ -497,6 +519,11 @@ async function callTool(name, args = {}) {
       const id = promptId(args);
       return apiJson('GET', pathFor(pid, `/prompts/${encodeURIComponent(id)}`));
     }
+    case 'rapideticket_create_prompt_branch': {
+      const pid = projectId(args);
+      const id = promptId(args);
+      return apiJson('POST', pathFor(pid, `/prompts/${encodeURIComponent(id)}/git-branch`), {});
+    }
     case 'rapideticket_list_agents':
       return listAgents(projectId(args), args);
     case 'rapideticket_list_active_skills':
@@ -523,6 +550,10 @@ async function callTool(name, args = {}) {
     case 'rapideticket_get_ticket': {
       const ids = projectAndIssue(args);
       return apiJson('GET', pathFor(ids.projectId, `/issues/${encodeURIComponent(ids.issueId)}`));
+    }
+    case 'rapideticket_create_ticket_branch': {
+      const ids = projectAndIssue(args);
+      return apiJson('POST', pathFor(ids.projectId, `/issues/${encodeURIComponent(ids.issueId)}/git-branch`), {});
     }
     case 'rapideticket_create_ticket': {
       const pid = projectId(args);
@@ -577,6 +608,9 @@ async function handle(request) {
   try {
     switch (request?.method) {
       case 'initialize':
+        void startHeartbeat().catch((error) => {
+          console.error(`[rapideticket-mcp] Heartbeat unavailable: ${error.message}`);
+        });
         return rpcResult(id, {
           protocolVersion,
           capabilities: { tools: {} },
@@ -598,6 +632,24 @@ async function handle(request) {
     }
     return rpcError(id, -32603, error instanceof Error ? error.message : String(error));
   }
+}
+
+let heartbeatTimer = null;
+
+async function sendHeartbeat() {
+  if (!config.apiToken) return;
+  await apiJson('POST', '/api/v1/mcp/heartbeat', {});
+}
+
+async function startHeartbeat() {
+  await sendHeartbeat();
+  if (heartbeatTimer) return;
+  heartbeatTimer = setInterval(() => {
+    void sendHeartbeat().catch((error) => {
+      console.error(`RapideTicket MCP heartbeat failed: ${error instanceof Error ? error.message : String(error)}`);
+    });
+  }, 15_000);
+  heartbeatTimer.unref?.();
 }
 
 async function serveStdio() {

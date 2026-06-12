@@ -56,6 +56,7 @@ curl http://localhost:8090/health
 - `rapideticket_list_tickets`
 - `rapideticket_list_prompts`
 - `rapideticket_get_prompt`
+- `rapideticket_create_prompt_branch`
 - `rapideticket_list_agents`
 - `rapideticket_list_active_skills`
 - `rapideticket_list_sprints`
@@ -65,6 +66,7 @@ curl http://localhost:8090/health
 - `rapideticket_search_specifications`
 - `rapideticket_get_specification`
 - `rapideticket_get_ticket`
+- `rapideticket_create_ticket_branch`
 - `rapideticket_create_ticket`
 - `rapideticket_update_ticket`
 - `rapideticket_move_ticket`
@@ -96,6 +98,17 @@ the raw editor JSON. `rapideticket_get_specification` returns one full page.
 their attached, currently enabled skills. `rapideticket_list_active_skills` returns
 only project skills currently enabled, including their Markdown instructions so
 an MCP client can use them as operational context.
+
+### Git branches and live connection
+
+The branch tools create the planned branch on the default GitHub or GitLab
+destination configured for the project. Prompt branches use the stable
+`prompt/<prompt-key>` format. Repeated calls are idempotent and return the
+branch already attached to the ticket or prompt.
+
+Once the MCP handshake succeeds, the server sends a heartbeat every 15 seconds.
+The project MCP settings page displays the corresponding token as connected in
+near real time and marks it offline when heartbeats stop.
 
 ## Publish
 
