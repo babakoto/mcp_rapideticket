@@ -5,7 +5,7 @@ import { argv, env, exit, stdin, stdout } from 'node:process';
 import { createInterface } from 'node:readline';
 
 const protocolVersion = '2024-11-05';
-const serverVersion = '0.1.4';
+const serverVersion = '0.1.5';
 const defaultApiUrl = 'https://rapideticket.com';
 
 function cleanBaseUrl(value) {
@@ -68,6 +68,24 @@ function tools() {
         },
         ['promptId'],
       ),
+    },
+    {
+      name: 'rapideticket_list_agents',
+      description: 'List AI agents for a project, including their avatar and attached skills.',
+      inputSchema: objectSchema({
+        projectId: projectProp,
+        q: { type: 'string', description: 'Optional search query matching agent name or description.' },
+        limit: { type: 'number', description: 'Maximum number of agents.' },
+      }),
+    },
+    {
+      name: 'rapideticket_list_active_skills',
+      description: 'List skills enabled on a project, including their Markdown instructions.',
+      inputSchema: objectSchema({
+        projectId: projectProp,
+        q: { type: 'string', description: 'Optional search query matching skill name, description, or Markdown.' },
+        limit: { type: 'number', description: 'Maximum number of active skills.' },
+      }),
     },
     {
       name: 'rapideticket_list_sprints',
@@ -347,6 +365,47 @@ async function listPrompts(projectIdValue, args = {}) {
   return filtered.slice(0, limit && limit > 0 ? Math.trunc(limit) : filtered.length);
 }
 
+function filterAndLimit(items, args, searchText) {
+  if (!Array.isArray(items)) return items;
+  const query = stringArg(args, 'q').toLowerCase();
+  const limit = numberArg(args, 'limit');
+  const filtered = query
+    ? items.filter((item) => searchText(item).toLowerCase().includes(query))
+    : items;
+  return filtered.slice(0, limit && limit > 0 ? Math.trunc(limit) : filtered.length);
+}
+
+async function listAgents(projectIdValue, args = {}) {
+  const items = await apiJson('GET', pathFor(projectIdValue, '/ai/agents'));
+  if (!Array.isArray(items)) return items;
+  const agents = items.map((item) => {
+    const activeSkills = Array.isArray(item?.skills)
+      ? item.skills.filter((skill) => skill?.enabled === true)
+      : [];
+    return {
+      ...item,
+      skillIds: activeSkills.map((skill) => skill.id).filter(Boolean),
+      skills: activeSkills,
+    };
+  });
+  return filterAndLimit(
+    agents,
+    args,
+    (item) => `${stringArg(item, 'name')} ${stringArg(item, 'description')}`,
+  );
+}
+
+async function listActiveSkills(projectIdValue, args = {}) {
+  const items = await apiJson('GET', pathFor(projectIdValue, '/ai/skills'));
+  if (!Array.isArray(items)) return items;
+  return filterAndLimit(
+    items.filter((item) => item?.enabled === true),
+    args,
+    (item) =>
+      `${stringArg(item, 'name')} ${stringArg(item, 'description')} ${stringArg(item, 'markdown')}`,
+  );
+}
+
 function bodyText(value) {
   if (!value) return '';
   if (typeof value === 'string') {
@@ -438,6 +497,10 @@ async function callTool(name, args = {}) {
       const id = promptId(args);
       return apiJson('GET', pathFor(pid, `/prompts/${encodeURIComponent(id)}`));
     }
+    case 'rapideticket_list_agents':
+      return listAgents(projectId(args), args);
+    case 'rapideticket_list_active_skills':
+      return listActiveSkills(projectId(args), args);
     case 'rapideticket_list_sprints':
       return apiJson('GET', pathFor(projectId(args), '/mvps'));
     case 'rapideticket_list_sprint_tickets': {

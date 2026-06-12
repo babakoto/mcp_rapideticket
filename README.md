@@ -56,6 +56,8 @@ curl http://localhost:8090/health
 - `rapideticket_list_tickets`
 - `rapideticket_list_prompts`
 - `rapideticket_get_prompt`
+- `rapideticket_list_agents`
+- `rapideticket_list_active_skills`
 - `rapideticket_list_sprints`
 - `rapideticket_list_sprint_tickets`
 - `rapideticket_list_backlog_tickets`
@@ -87,6 +89,13 @@ documentation attached to a project:
 `rapideticket_list_specifications` returns the page tree metadata and a compact
 plain-text extraction by default. Pass `includeBody: true` when the client needs
 the raw editor JSON. `rapideticket_get_specification` returns one full page.
+
+### Agents and skills
+
+`rapideticket_list_agents` returns the AI agents configured for the project and
+their attached, currently enabled skills. `rapideticket_list_active_skills` returns
+only project skills currently enabled, including their Markdown instructions so
+an MCP client can use them as operational context.
 
 ## Publish
 
